@@ -43,6 +43,8 @@ from lm_eval.models.utils import (
 eval_logger = logging.getLogger(__name__)
 
 
+MAX_REASONING_TOKENS = 512
+
 @register_model("hf-auto", "hf", "huggingface")
 class HFLM(TemplateLM):
     """
@@ -1031,6 +1033,22 @@ class HFLM(TemplateLM):
         self.batch_sizes[sched] = self._detect_batch_size(n_reordered_requests, pos)
         print(f"Determined largest batch size: {self.batch_sizes[sched]}")
         return self.batch_sizes[sched]
+    
+    def _generate_reasoning(self, context_enc: List[int]) -> List[int]:
+        """Generate reasoning tokens and append 'Answer:' prompt."""
+        input_ids = torch.tensor([context_enc], device=self.device)
+        # Generate until "Answer:" is produced
+        generated = self._model_generate(
+            input_ids,
+            max_length=len(context_enc) + MAX_REASONING_TOKENS,
+            stop=["Answer:"],  # Stop at this sequence
+            do_sample=False,  # Use greedy decoding
+        )
+        # Extract new tokens (excluding input)
+        reasoning_tokens = generated[0].tolist()[len(context_enc):]
+        # Encode "Answer:" and append to reasoning
+        answer_tokens = self.tok_encode("Answer:")
+        return reasoning_tokens + answer_tokens
 
     def _loglikelihood_tokens(
         self,
@@ -1113,6 +1131,9 @@ class HFLM(TemplateLM):
                 assert len(context_enc) > 0
                 assert len(continuation_enc) > 0
                 assert len(continuation_enc) <= self.max_length
+
+                reasoning_tokens = self._generate_reasoning(context_enc)
+                context_enc = context_enc + reasoning_tokens
 
                 # how this all works (illustrated on a causal decoder-only setup):
                 #          CTX      CONT
