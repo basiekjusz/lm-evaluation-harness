@@ -1039,15 +1039,14 @@ class HFLM(TemplateLM):
         """Generate reasoning tokens and append 'Answer:' prompt."""
         input_ids = torch.tensor([context_enc], device=self.device)
 
-        context_key = tuple
-        if context_key in self.reasoning_cache:
-            return self.reasoning_cache[context_key]
+        if context_enc in self.reasoning_cache:
+            return self.reasoning_cache[context_enc]
 
         # Generate until "Answer:" is produced
         generated = self._model_generate(
             input_ids,
             max_length=len(context_enc) + MAX_REASONING_TOKENS,
-            stop=["Answer:", "A:"],  # Stop at this sequence
+            stop=["</think>"],  # Stop at this sequence
             do_sample=False,  # Use greedy decoding
         )
         # Extract new tokens (excluding input)
@@ -1055,10 +1054,12 @@ class HFLM(TemplateLM):
         # Encode "Answer:" and append to reasoning
         answer_tokens = self.tok_encode("A:")
 
-        answer = reasoning_tokens + answer_tokens
-        self.reasoning_cache[context_key] = answer
+        print("reasoning is here:", self.tok_decode(generated[0].tolist()))
 
-        return answer
+        answer = reasoning_tokens + answer_tokens
+        self.reasoning_cache[context_enc] = answer
+
+        return reasoning_tokens + answer_tokens
 
     def _loglikelihood_tokens(
         self,
@@ -1145,7 +1146,7 @@ class HFLM(TemplateLM):
                 reasoning_tokens = self._generate_reasoning(context_enc)
                 context_enc = context_enc + reasoning_tokens
 
-                print("essunia ", self.tok_decode(context_enc))
+                print("essunia ", context_enc)
  
                 # how this all works (illustrated on a causal decoder-only setup):
                 #          CTX      CONT
