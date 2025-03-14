@@ -1056,7 +1056,8 @@ class HFLM(TemplateLM):
         # Encode "Answer:" and append to reasoning
         answer_tokens = self.tok_encode("A:")
 
-        print("reasoning is here:", self.tok_decode(generated[0].tolist()))
+        print("context is here:", self.tok_decode(generated[0].tolist()[:len(context_enc)]))
+        print("reasoning is here:", self.tok_decode(reasoning_tokens))
 
         answer = reasoning_tokens + answer_tokens
         self.reasoning_cache[context_key] = answer
@@ -1147,8 +1148,6 @@ class HFLM(TemplateLM):
 
                 reasoning_tokens = self._generate_reasoning(context_enc)
                 context_enc = context_enc + reasoning_tokens
-
-                print("essunia ", context_enc)
  
                 # how this all works (illustrated on a causal decoder-only setup):
                 #          CTX      CONT
