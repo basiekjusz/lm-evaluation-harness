@@ -1039,8 +1039,10 @@ class HFLM(TemplateLM):
         """Generate reasoning tokens and append 'Answer:' prompt."""
         input_ids = torch.tensor([context_enc], device=self.device)
 
-        if context_enc in self.reasoning_cache:
-            return self.reasoning_cache[context_enc]
+        context_key = tuple(context_enc)
+
+        if context_key in self.reasoning_cache:
+            return self.reasoning_cache[context_key]
 
         # Generate until "Answer:" is produced
         generated = self._model_generate(
@@ -1057,7 +1059,7 @@ class HFLM(TemplateLM):
         print("reasoning is here:", self.tok_decode(generated[0].tolist()))
 
         answer = reasoning_tokens + answer_tokens
-        self.reasoning_cache[context_enc] = answer
+        self.reasoning_cache[context_key] = answer
 
         return reasoning_tokens + answer_tokens
 
