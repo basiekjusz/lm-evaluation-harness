@@ -1135,6 +1135,8 @@ class HFLM(TemplateLM):
                 reasoning_tokens = self._generate_reasoning(context_enc)
                 context_enc = context_enc + reasoning_tokens
 
+                print("essunia ", context_enc)
+ 
                 # how this all works (illustrated on a causal decoder-only setup):
                 #          CTX      CONT
                 # inp    0 1 2 3|4 5 6 7 8 9   <- last token is deleted by inp[:, :-1]
