@@ -98,6 +98,7 @@ class HFLM(TemplateLM):
     ) -> None:
         super().__init__()
         # optionally: take in an already-initialized transformers.PreTrainedModel
+        self.reasoning_cache = {}
         if not isinstance(pretrained, str):
             eval_logger.warning(
                 "`pretrained` model kwarg is not of type `str`. Many other model arguments may be ignored. Please do not launch via accelerate or use `parallelize=True` if passing an existing model this way."
@@ -1037,18 +1038,26 @@ class HFLM(TemplateLM):
     def _generate_reasoning(self, context_enc: List[int]) -> List[int]:
         """Generate reasoning tokens and append 'Answer:' prompt."""
         input_ids = torch.tensor([context_enc], device=self.device)
+
+        if context_enc in self.reasoning_cache:
+            return self.reasoning_cache[context_enc]
+
         # Generate until "Answer:" is produced
         generated = self._model_generate(
             input_ids,
             max_length=len(context_enc) + MAX_REASONING_TOKENS,
-            stop=["Answer:"],  # Stop at this sequence
+            stop=["Answer:", "A:"],  # Stop at this sequence
             do_sample=False,  # Use greedy decoding
         )
         # Extract new tokens (excluding input)
         reasoning_tokens = generated[0].tolist()[len(context_enc):]
         # Encode "Answer:" and append to reasoning
-        answer_tokens = self.tok_encode("Answer:")
-        return reasoning_tokens + answer_tokens
+        answer_tokens = self.tok_encode("A:")
+
+        answer = reasoning_tokens + answer_tokens
+        self.reasoning_cache[context_enc] = answer
+
+        return answer
 
     def _loglikelihood_tokens(
         self,
@@ -1135,7 +1144,7 @@ class HFLM(TemplateLM):
                 reasoning_tokens = self._generate_reasoning(context_enc)
                 context_enc = context_enc + reasoning_tokens
 
-                print("essunia ", context_enc)
+                print("essunia ", self.tok_decode(context_enc))
  
                 # how this all works (illustrated on a causal decoder-only setup):
                 #          CTX      CONT
