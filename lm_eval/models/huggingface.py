@@ -43,7 +43,7 @@ from lm_eval.models.utils import (
 eval_logger = logging.getLogger(__name__)
 
 
-MAX_REASONING_TOKENS = 512
+MAX_REASONING_TOKENS = 4096
 
 @register_model("hf-auto", "hf", "huggingface")
 class HFLM(TemplateLM):
