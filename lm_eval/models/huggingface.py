@@ -1151,9 +1151,6 @@ class HFLM(TemplateLM):
                 assert len(context_enc) > 0
                 assert len(continuation_enc) > 0
                 assert len(continuation_enc) <= self.max_length
-
-                reasoning_tokens = self._generate_reasoning(context_enc)
-                context_enc = context_enc + reasoning_tokens
  
                 # how this all works (illustrated on a causal decoder-only setup):
                 #          CTX      CONT
