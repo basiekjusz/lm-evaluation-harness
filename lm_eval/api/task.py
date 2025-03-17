@@ -454,7 +454,7 @@ class Task(abc.ABC):
             )
 
             if apply_reasoning and generate_reasoning is not None:
-                reasoning = generate_reasoning(doc)
+                reasoning = generate_reasoning(fewshot_ctx)
                 if reasoning is not None:
                     fewshot_ctx += reasoning
 
