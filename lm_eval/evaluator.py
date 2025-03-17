@@ -77,6 +77,7 @@ def simple_evaluate(
     torch_random_seed: int = 1234,
     fewshot_random_seed: int = 1234,
     confirm_run_unsafe_code: bool = False,
+    apply_reasoning: Optional[bool] = False
 ):
     """Instantiate and evaluate a model on a list of tasks.
 
@@ -327,6 +328,7 @@ def simple_evaluate(
         fewshot_as_multiturn=fewshot_as_multiturn,
         verbosity=verbosity,
         confirm_run_unsafe_code=confirm_run_unsafe_code,
+        apply_reasoning=apply_reasoning
     )
     if verbosity is not None:
         lm_eval.setup_logging(verbosity=verbosity)
@@ -389,6 +391,7 @@ def evaluate(
     fewshot_as_multiturn: bool = False,
     verbosity: str = "INFO",
     confirm_run_unsafe_code: bool = False,
+    apply_reasoning: Optional[bool] = False
 ):
     """Instantiate and evaluate a model on a list of tasks.
 
@@ -492,6 +495,10 @@ def evaluate(
             tokenizer_name=getattr(lm, "tokenizer_name", "")
             if apply_chat_template
             else "",
+            apply_reasoning=bool(apply_reasoning),
+            generate_reasoning=getattr(lm, "generate_reasoning")
+            if apply_reasoning
+            else None,
         )
         eval_logger.debug(
             f"Task: {task_output.task_name}; number of requests on this rank: {len(task.instances)}"

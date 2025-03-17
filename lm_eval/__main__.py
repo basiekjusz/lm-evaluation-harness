@@ -262,6 +262,11 @@ def setup_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Confirm that you understand the risks of running unsafe code for tasks that require it",
     )
+    parser.add_argument(
+        "--apply_reasoning",
+        action="store_true",
+        help="If True, apply reasoning to the prompt. Especially useful for multiple choice tasks.",
+    )
     return parser
 
 
@@ -410,7 +415,8 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         numpy_random_seed=args.seed[1],
         torch_random_seed=args.seed[2],
         fewshot_random_seed=args.seed[3],
-        confirm_run_unsafe_code=args.confirm_run_unsafe_code,
+        confirm_run_unsafe_code=args.confirm_run_unsafe_code,        
+        apply_reasoning=args.apply_reasoning,
         **request_caching_args,
     )
 

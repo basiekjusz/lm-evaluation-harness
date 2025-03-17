@@ -1035,8 +1035,13 @@ class HFLM(TemplateLM):
         print(f"Determined largest batch size: {self.batch_sizes[sched]}")
         return self.batch_sizes[sched]
     
-    def _generate_reasoning(self, context_enc: List[int]) -> List[int]:
-        """Generate reasoning tokens and append 'Answer:' prompt."""
+    def generate_reasoning(self, context: str) -> List[int]:
+        """Generate reasoning tokens and append."""
+        if context in self.reasoning_cache:
+            return self.reasoning_cache[context]
+
+
+        context_enc = self.tok_encode(context)
         input_ids = torch.tensor([context_enc], device=self.device)
 
         context_key = tuple(context_enc)
@@ -1053,16 +1058,17 @@ class HFLM(TemplateLM):
         )
         # Extract new tokens (excluding input)
         reasoning_tokens = generated[0].tolist()[len(context_enc):]
-        # Encode "Answer:" and append to reasoning
-        answer_tokens = self.tok_encode("A:")
 
         print("context is here:", self.tok_decode(generated[0].tolist()[:len(context_enc)]))
-        print("reasoning is here:", self.tok_decode(reasoning_tokens))
 
-        answer = reasoning_tokens + answer_tokens
+        reasoning = self.tok_decode(reasoning_tokens)
+
+        print("Reasoning: ", reasoning)
+
+        answer = reasoning + "A: "
         self.reasoning_cache[context_key] = answer
 
-        return reasoning_tokens + answer_tokens
+        return answer
 
     def _loglikelihood_tokens(
         self,

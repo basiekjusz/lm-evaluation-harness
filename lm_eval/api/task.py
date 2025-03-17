@@ -387,6 +387,8 @@ class Task(abc.ABC):
         fewshot_as_multiturn: bool = False,
         chat_template: Optional[Callable] = None,
         tokenizer_name: str = "",
+        apply_reasoning = False,
+        generate_reasoning: Optional[Callable] = None,
     ) -> None:
         """Build a set of Instances for a task, and store them in task.instances"""
 
@@ -402,6 +404,7 @@ class Task(abc.ABC):
             else ""
         )
         cache_key += f"-tokenizer{tokenizer_name}"
+        cache_key += f"-reasoning" if apply_reasoning else ""
 
         cached_instances = load_from_cache(file_name=cache_key, cache=cache_requests)
 
@@ -450,6 +453,11 @@ class Task(abc.ABC):
                 gen_prefix=self.doc_to_prefix(doc),
             )
 
+            if apply_reasoning and generate_reasoning is not None:
+                reasoning = generate_reasoning(doc)
+                if reasoning is not None:
+                    fewshot_ctx += reasoning
+
             # TODO: we should override self.config.repeats if doing greedy gen so users don't waste time+compute
             inst = self.construct_requests(
                 doc=doc,
@@ -457,6 +465,8 @@ class Task(abc.ABC):
                 metadata=(self.config["task"], doc_id, self.config.repeats),
                 apply_chat_template=apply_chat_template,
                 chat_template=chat_template,
+                apply_reasoning=apply_reasoning,
+                generate_reasoning=generate_reasoning,
             )
 
             if not isinstance(inst, list):
