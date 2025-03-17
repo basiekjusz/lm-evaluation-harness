@@ -1059,13 +1059,9 @@ class HFLM(TemplateLM):
         # Extract new tokens (excluding input)
         reasoning_tokens = generated[0].tolist()[len(context_enc):]
 
-        print("context is here:", self.tok_decode(generated[0].tolist()[:len(context_enc)]))
-
         reasoning = self.tok_decode(reasoning_tokens)
-
-        print("Reasoning: ", reasoning)
-
         answer = reasoning + "A: "
+        
         self.reasoning_cache[context_key] = answer
 
         return answer
