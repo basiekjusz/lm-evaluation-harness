@@ -1037,9 +1037,7 @@ class HFLM(TemplateLM):
     
     def _generate_reasoning(self, context_enc: List[int]) -> List[int]:
         """Generate reasoning tokens and append 'Answer:' prompt."""
-        think_token = self.tok_encode("<think>")
-
-        input_ids = torch.tensor([context_enc + think_token], device=self.device)
+        input_ids = torch.tensor(context_enc, device=self.device)
 
         context_key = tuple(context_enc)
 
