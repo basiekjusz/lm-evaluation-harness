@@ -389,6 +389,7 @@ class Task(abc.ABC):
         tokenizer_name: str = "",
         apply_reasoning = False,
         generate_reasoning: Optional[Callable] = None,
+        model_name: Optional[str] = None,
     ) -> None:
         """Build a set of Instances for a task, and store them in task.instances"""
 
@@ -404,7 +405,7 @@ class Task(abc.ABC):
             else ""
         )
         cache_key += f"-tokenizer{tokenizer_name}"
-        cache_key += f"-reasoning" if apply_reasoning else ""
+        cache_key += f"-reasoning-{model_name}" if apply_reasoning else ""
 
         cached_instances = load_from_cache(file_name=cache_key, cache=cache_requests)
 

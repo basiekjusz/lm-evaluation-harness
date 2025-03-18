@@ -499,6 +499,7 @@ def evaluate(
             generate_reasoning=getattr(lm, "generate_reasoning")
             if apply_reasoning
             else None,
+            model_name=getattr(lm, "model_name", "") if apply_reasoning else None
         )
         eval_logger.debug(
             f"Task: {task_output.task_name}; number of requests on this rank: {len(task.instances)}"
