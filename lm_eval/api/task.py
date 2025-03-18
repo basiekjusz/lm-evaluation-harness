@@ -388,7 +388,6 @@ class Task(abc.ABC):
         chat_template: Optional[Callable] = None,
         tokenizer_name: str = "",
         apply_reasoning = False,
-        generate_reasoning: Optional[Callable] = None,
         model_name: Optional[str] = None,
     ) -> None:
         """Build a set of Instances for a task, and store them in task.instances"""
@@ -454,11 +453,6 @@ class Task(abc.ABC):
                 gen_prefix=self.doc_to_prefix(doc),
             )
 
-            if apply_reasoning and generate_reasoning is not None and self.OUTPUT_TYPE != "generate_until":
-                reasoning = generate_reasoning(fewshot_ctx)
-                if reasoning is not None:
-                    fewshot_ctx += reasoning
-
             # TODO: we should override self.config.repeats if doing greedy gen so users don't waste time+compute
             inst = self.construct_requests(
                 doc=doc,
@@ -466,6 +460,7 @@ class Task(abc.ABC):
                 metadata=(self.config["task"], doc_id, self.config.repeats),
                 apply_chat_template=apply_chat_template,
                 chat_template=chat_template,
+                apply_reasoning=apply_reasoning,
             )
 
             if not isinstance(inst, list):
@@ -1678,19 +1673,31 @@ class MultipleChoiceTask(Task):
 
     def doc_to_target(self, doc: dict) -> str:
         return " " + doc["choices"][doc["gold"]]
+    
 
     def construct_requests(self, doc: dict, ctx: str, **kwargs) -> List[Instance]:
         # TODO: add mutual info here?
-        return [
-            Instance(
-                request_type="loglikelihood",
+        print("CONSTRUCTING MULTIPLE TASK :)")
+        apply_reasoning = kwargs.pop("apply_reasoning", False)
+        if apply_reasoning:
+            return [Instance(
+                request_type="generate_reasoning",
                 doc=doc,
-                arguments=(ctx, " {}".format(choice)),
-                idx=i,
+                arguments=(ctx),
+                idx=0,
                 **kwargs,
-            )
-            for i, choice in enumerate(doc["choices"])
-        ]
+            )]
+        else:
+            return [
+                Instance(
+                    request_type="generate_reasoning" if apply_reasoning else "multiple_choice",
+                    doc=doc,
+                    arguments=(ctx, " {}".format(choice)),
+                    idx=i,
+                    **kwargs,
+                )
+                for i, choice in enumerate(doc["choices"])
+            ]
 
     def process_results(self, doc: dict, results: Iterable[Tuple[float, bool]]) -> dict:
         results = [
