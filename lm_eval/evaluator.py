@@ -476,10 +476,13 @@ def evaluate(
     limit_arg = limit
     limits = []
     for task_output in eval_tasks:
-        task: Task = task_output.task
+        task: Task = task_output.task            
 
         limit = get_sample_size(task, limit_arg)
         limits.append(limit)
+
+        if task.OUTPUT_TYPE == "multiple_choice":
+            else:
         task.build_all_requests(
             limit=limit,
             rank=lm.rank,
@@ -496,9 +499,6 @@ def evaluate(
             if apply_chat_template
             else "",
             apply_reasoning=bool(apply_reasoning),
-            generate_reasoning=getattr(lm, "generate_reasoning")
-            if apply_reasoning
-            else None,
             model_name=getattr(lm, "model_name", "") if apply_reasoning else None
         )
         eval_logger.debug(
