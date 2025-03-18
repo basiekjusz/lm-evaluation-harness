@@ -217,6 +217,7 @@ def setup_parser() -> argparse.ArgumentParser:
             "String arguments for model generation on reasoning tasks,"
             " e.g. `temperature=0,top_k=0,top_p=0`."
         )
+    )
     parser.add_argument(
         "--verbosity",
         "-v",

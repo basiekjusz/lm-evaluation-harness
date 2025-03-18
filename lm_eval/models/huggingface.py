@@ -1035,7 +1035,9 @@ class HFLM(TemplateLM):
         print(f"Determined largest batch size: {self.batch_sizes[sched]}")
         return self.batch_sizes[sched]
     
-    def generate_reasoning(self, context: str) -> List[int]:
+    def generate_reasoning(
+        self, requests: List[Instance], disable_tqdm: bool = False
+    ) -> List[str]:
         """Generate reasoning tokens and append."""
         if context in self.reasoning_cache:
             return self.reasoning_cache[context]
