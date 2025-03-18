@@ -1352,7 +1352,6 @@ class HFLM(TemplateLM):
         eos = self.tok_decode(self.eot_token_id, skip_special_tokens=False)
         for chunk in chunks:
             contexts, all_gen_kwargs = zip(*chunk)
-            print(all_gen_kwargs)
             # we assume all gen kwargs in the batch are the same
             # this is safe to assume because the `grouper` object ensures it.
             gen_kwargs = all_gen_kwargs[0]
