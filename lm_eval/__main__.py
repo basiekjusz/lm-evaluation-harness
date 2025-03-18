@@ -210,6 +210,14 @@ def setup_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--reason_kwargs",
+        type=str,
+        default=None,
+        help=(
+            "String arguments for model generation on reasoning tasks,"
+            " e.g. `temperature=0,top_k=0,top_p=0`."
+        )
+    parser.add_argument(
         "--verbosity",
         "-v",
         type=str.upper,
@@ -409,6 +417,7 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         apply_chat_template=args.apply_chat_template,
         fewshot_as_multiturn=args.fewshot_as_multiturn,
         gen_kwargs=args.gen_kwargs,
+        reason_kwargs=args.reason_kwargs,
         task_manager=task_manager,
         predict_only=args.predict_only,
         random_seed=args.seed[0],

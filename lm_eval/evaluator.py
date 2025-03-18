@@ -69,6 +69,7 @@ def simple_evaluate(
     apply_chat_template: Union[bool, str] = False,
     fewshot_as_multiturn: bool = False,
     gen_kwargs: Optional[str] = None,
+    reason_kwargs: Optional[str] = None,
     task_manager: Optional[TaskManager] = None,
     verbosity=None,
     predict_only: bool = False,
@@ -192,6 +193,10 @@ def simple_evaluate(
         )
         if gen_kwargs == "":
             gen_kwargs = None
+    if reason_kwargs is not None:
+        reason_kwargs = simple_parse_args_string(reason_kwargs)
+        if reason_kwargs == "":
+            reason_kwargs = None
 
     if isinstance(model, str):
         if model_args is None:
@@ -264,6 +269,12 @@ def simple_evaluate(
                     if gen_kwargs is not None:
                         task_obj.set_config(
                             key="generation_kwargs", value=gen_kwargs, update=True
+                        )
+
+                if task_obj.get_config("output_type") == "multiple_choice":
+                    if reason_kwargs is not None:
+                        task_obj.set_config(
+                            key="reasoning_kwargs", value=reason_kwargs, update=True
                         )
 
                 if predict_only:

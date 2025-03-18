@@ -89,6 +89,7 @@ class TaskConfig(dict):
     metric_list: Optional[list] = None
     output_type: OutputType = "generate_until"
     generation_kwargs: Optional[dict] = None
+    reasoning_kwargs: Optional[dict] = None
     repeats: int = 1
     filter_list: Optional[Union[str, list]] = None
     should_decontaminate: bool = False
@@ -124,6 +125,15 @@ class TaskConfig(dict):
                     "do_sample": False,
                 }
 
+        if self.reasoning_kwargs is None:
+            self.reasoning_kwargs = deepcopy(self.generation_kwargs)
+            
+            assert self.reasoning_kwargs is not None
+            
+            self.reasoning_kwargs['until'] = ["</think>", "</Thought>"]
+        else:
+            if "until" not in self.reasoning_kwargs:
+                self.reasoning_kwargs["until"] = ["</think>", "</Thought>"]
     def __getitem__(self, item):
         return getattr(self, item)
 
@@ -1468,7 +1478,9 @@ class ConfigurableTask(Task):
                 aux_arguments = [("", f"{choice}") for choice in choices]
 
                 arguments.extend(aux_arguments)
-        elif (self.OUTPUT_TYPE == "multiple_choice" and apply_reasoning) or self.OUTPUT_TYPE == "generate_until" :
+        elif self.OUTPUT_TYPE == "multiple_choice" and apply_reasoning:
+            arguments = (ctx, deepcopy(self.config.generation_kwargs))
+        elif self.OUTPUT_TYPE == "generate_until" :
             arguments = (ctx, deepcopy(self.config.generation_kwargs))
 
         multimodal_arg = {}
@@ -1489,7 +1501,7 @@ class ConfigurableTask(Task):
         if self.OUTPUT_TYPE == "multiple_choice":
             if apply_reasoning:
                 return Instance(
-                    request_type="generate_reasoning",
+                    request_type="generate_until",
                     doc=doc,
                     arguments=arguments,
                     idx=0,
