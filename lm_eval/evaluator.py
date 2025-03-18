@@ -481,8 +481,6 @@ def evaluate(
         limit = get_sample_size(task, limit_arg)
         limits.append(limit)
 
-        if task.OUTPUT_TYPE == "multiple_choice":
-            else:
         task.build_all_requests(
             limit=limit,
             rank=lm.rank,
