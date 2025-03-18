@@ -1421,6 +1421,7 @@ class ConfigurableTask(Task):
                         request_type="loglikelihood",
                         doc=inst.doc,
                         arguments=arg,
+                        metadata=inst.metadata,
                         idx=i,
                     ) for i, arg in enumerate(arguments)
                 ]
