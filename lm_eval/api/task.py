@@ -372,7 +372,11 @@ class Task(abc.ABC):
         raise NotImplementedError
 
     def doc_to_prefix(self, doc):
-        return ""
+        return ""    
+
+    @abc.abstractmethod
+    def rebuild_requests_from_reasoning(self, updated_contexts: list[str]):
+        pass
 
     def build_all_requests(
         self,
@@ -1358,9 +1362,66 @@ class ConfigurableTask(Task):
                 return utils.apply_template(gen_prefix, doc)
         return None
 
+    def rebuild_requests_from_reasoning(self, updated_contexts: list[str]):
+        """
+        Rebuilds the requests from the existing instances, useful for when you want to change the generation kwargs
+        """
+        assert self._instances is not None, "No instances to rebuild from"
+        assert len(updated_contexts) == len(self._instances), "Contexts must match instances"
+
+        aux_arguments = None
+        
+        new_instances = []
+        for inst, ctx in zip(self._instances, updated_contexts):
+            choices = self.doc_to_choice(inst.doc)
+
+            target_delimiter = self.config.target_delimiter
+            if self.multiple_input:
+                # If there are multiple inputs, choices are placed in the ctx
+                # apply chat_template to choices if apply_chat_template
+                cont = self.doc_to_target(inst.doc)
+
+                arguments = [
+                    (
+                        ctx + choice,
+                        f"{target_delimiter}{cont}",
+                    )
+                    for choice in choices
+                ]
+            else:
+                # Otherwise they are placed in the continuation
+                arguments = [(ctx, f"{target_delimiter}{cont}") for cont in choices]
+
+            # TODO: we should raise a warning telling users this will at most ~2x runtime.
+            if "acc_mutual_info" in self._metric_fn_list.keys():
+                # if we are calculating multiple choice accuracy
+                # using mutual information instead of raw loglikelihood as metric, need unconditional lls.
+
+                # here mutual info refers to calculating
+                # log(P(choice|ctx) / P(choice)) = log(P(choice|ctx)) - log(P(choice))
+                # in other words normalizing by subtracting the unconditional logprob of each choice.
+                aux_arguments = [("", f"{choice}") for choice in choices]
+
+                arguments.extend(aux_arguments)
+
+            new_instances.extend(
+                [
+                    Instance(
+                        request_type="loglikelihood",
+                        doc=inst.doc,
+                        arguments=arg,
+                        idx=i,
+                    ) for i, arg in enumerate(arguments)
+                ]
+            ) 
+
+        self._instances = new_instances
+
     def construct_requests(
         self, doc: dict, ctx: str, **kwargs
     ) -> Union[List[Instance], Instance]:
+        apply_reasoning = kwargs.pop("generate_reasoning", False)
+
         apply_chat_template = kwargs.pop("apply_chat_template", False)
         chat_template: Callable | None = kwargs.pop("chat_template", None)
 
@@ -1370,7 +1431,7 @@ class ConfigurableTask(Task):
             arguments = (ctx, self.doc_to_target(doc))
         elif self.OUTPUT_TYPE == "loglikelihood_rolling":
             arguments = (self.doc_to_target(doc),)
-        elif self.OUTPUT_TYPE == "multiple_choice":
+        elif self.OUTPUT_TYPE == "multiple_choice" and not apply_reasoning:
             choices = self.doc_to_choice(doc)
             target_delimiter = self.config.target_delimiter
             if apply_chat_template:
@@ -1407,8 +1468,7 @@ class ConfigurableTask(Task):
                 aux_arguments = [("", f"{choice}") for choice in choices]
 
                 arguments.extend(aux_arguments)
-
-        elif self.OUTPUT_TYPE == "generate_until":
+        elif (self.OUTPUT_TYPE == "multiple_choice" and apply_reasoning) or self.OUTPUT_TYPE == "generate_until" :
             arguments = (ctx, deepcopy(self.config.generation_kwargs))
 
         multimodal_arg = {}
@@ -1427,18 +1487,27 @@ class ConfigurableTask(Task):
                 arguments = arguments + (multimodal_arg,)
 
         if self.OUTPUT_TYPE == "multiple_choice":
-            request_list = [
-                Instance(
-                    request_type="loglikelihood",
+            if apply_reasoning:
+                return Instance(
+                    request_type="generate_reasoning",
                     doc=doc,
-                    arguments=arg,
-                    idx=i,
+                    arguments=arguments,
+                    idx=0,
                     **kwargs,
                 )
-                for i, arg in enumerate(arguments)
-            ]
+            else:
+                request_list = [
+                    Instance(
+                        request_type="loglikelihood",
+                        doc=doc,
+                        arguments=arg,
+                        idx=i,
+                        **kwargs,
+                    )
+                    for i, arg in enumerate(arguments)
+                ]
 
-            return request_list
+                return request_list
 
         return Instance(
             request_type=self.OUTPUT_TYPE,

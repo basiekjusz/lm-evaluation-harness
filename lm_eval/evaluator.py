@@ -499,6 +499,13 @@ def evaluate(
             apply_reasoning=bool(apply_reasoning),
             model_name=getattr(lm, "model_name", "") if apply_reasoning else None
         )
+
+        if task.OUTPUT_TYPE == "multiple_choice" and apply_reasoning:
+            eval_logger.info("Running reasoning to multiple choice task")
+            resps = getattr(lm, "generate_reasoning")(task.instances)
+
+            task.rebuild_requests_from_reasoning(resps)
+            
         eval_logger.debug(
             f"Task: {task_output.task_name}; number of requests on this rank: {len(task.instances)}"
         )
