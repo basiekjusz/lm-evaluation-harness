@@ -1431,7 +1431,7 @@ class ConfigurableTask(Task):
     def construct_requests(
         self, doc: dict, ctx: str, **kwargs
     ) -> Union[List[Instance], Instance]:
-        apply_reasoning = kwargs.pop("generate_reasoning", False)
+        apply_reasoning = kwargs.pop("apply_reasoning", False)
 
         apply_chat_template = kwargs.pop("apply_chat_template", False)
         chat_template: Callable | None = kwargs.pop("chat_template", None)
