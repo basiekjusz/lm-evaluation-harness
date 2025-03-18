@@ -474,6 +474,7 @@ class Task(abc.ABC):
                 metadata=(self.config["task"], doc_id, self.config.repeats),
                 apply_chat_template=apply_chat_template,
                 chat_template=chat_template,
+                apply_reasoning=apply_reasoning
             )
 
             if not isinstance(inst, list):
@@ -1479,6 +1480,7 @@ class ConfigurableTask(Task):
 
                 arguments.extend(aux_arguments)
         elif self.OUTPUT_TYPE == "multiple_choice" and apply_reasoning:
+            print("MULTIPLE REASONING HIHI HI")
             arguments = (ctx, deepcopy(self.config.reasoning_kwargs))
         elif self.OUTPUT_TYPE == "generate_until" :
             arguments = (ctx, deepcopy(self.config.generation_kwargs))
