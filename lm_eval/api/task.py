@@ -126,7 +126,7 @@ class TaskConfig(dict):
                 }
 
         if self.reasoning_kwargs is None:
-            self.reasoning_kwargs = deepcopy(self.generation_kwargs)
+            self.reasoning_kwargs = deepcopy(self.generation_kwargs) if self.generation_kwargs is not None else {}
             
             assert self.reasoning_kwargs is not None
             
