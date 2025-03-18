@@ -513,7 +513,7 @@ def evaluate(
 
         if task.OUTPUT_TYPE == "multiple_choice" and apply_reasoning:
             eval_logger.info("Running reasoning to multiple choice task")
-            resps = getattr(lm, "generate_reasoning")(task.instances)
+            resps = getattr(lm, "generate_until")(task.instances)
 
             task.rebuild_requests_from_reasoning(resps)
             
