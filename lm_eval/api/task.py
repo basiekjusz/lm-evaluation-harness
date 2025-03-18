@@ -1500,6 +1500,7 @@ class ConfigurableTask(Task):
 
         if self.OUTPUT_TYPE == "multiple_choice":
             if apply_reasoning:
+                print("applying reasoning", arguments)
                 return Instance(
                     request_type="generate_until",
                     doc=doc,
