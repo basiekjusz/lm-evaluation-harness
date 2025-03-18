@@ -453,7 +453,7 @@ class Task(abc.ABC):
                 gen_prefix=self.doc_to_prefix(doc),
             )
 
-            if apply_reasoning and generate_reasoning is not None:
+            if apply_reasoning and generate_reasoning is not None and self.OUTPUT_TYPE != "generate_until":
                 reasoning = generate_reasoning(fewshot_ctx)
                 if reasoning is not None:
                     fewshot_ctx += reasoning
