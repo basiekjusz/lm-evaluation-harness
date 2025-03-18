@@ -1479,7 +1479,7 @@ class ConfigurableTask(Task):
 
                 arguments.extend(aux_arguments)
         elif self.OUTPUT_TYPE == "multiple_choice" and apply_reasoning:
-            arguments = (ctx, deepcopy(self.config.generation_kwargs))
+            arguments = (ctx, deepcopy(self.config.reasoning_kwargs))
         elif self.OUTPUT_TYPE == "generate_until" :
             arguments = (ctx, deepcopy(self.config.generation_kwargs))
 
