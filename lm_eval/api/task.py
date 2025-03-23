@@ -237,6 +237,7 @@ class Task(abc.ABC):
         self._training_docs: Optional[list] = None
         self._fewshot_docs: Optional[list] = None
         self._instances: Optional[List[Instance]] = None
+        self._reasoning_instances: Optional[List[Instance]] = None
 
         self._config: TaskConfig = TaskConfig({**config}) if config else TaskConfig()
 
@@ -456,6 +457,9 @@ class Task(abc.ABC):
             doc_id_docs,
             total=num_docs,
         ):
+            print(doc_id)
+            print(doc)
+
             # sample fewshot context #TODO: need to offset doc_id by rank now!
             fewshot_ctx = self.fewshot_context(
                 doc,
@@ -1428,6 +1432,118 @@ class ConfigurableTask(Task):
             ) 
 
         self._instances = new_instances
+
+    def build_all_reasoning_requests(
+        self,
+        *,
+        limit: Union[int, None] = None,
+        rank: int = 0,
+        world_size: int = 1,
+        cache_requests: bool = False,
+        rewrite_requests_cache: bool = False,
+        system_instruction: Optional[str] = None,
+        apply_chat_template: bool = False,
+        fewshot_as_multiturn: bool = False,
+        chat_template: Optional[Callable] = None,
+        tokenizer_name: str = "",
+        model_name: Optional[str] = None,
+    ) -> None:
+        """Build a set of Instances for a task, and store them in task.instances"""
+
+        # used with caching
+        og_limit = limit
+
+        cache_key = f"reasoning-requests-{self._config.task}-{self.config.num_fewshot}shot-rank{rank}-world_size{world_size}"
+        cache_key += "-chat_template" if apply_chat_template else ""
+        cache_key += "-fewshot_as_multiturn" if fewshot_as_multiturn else ""
+        cache_key += (
+            f"-system_prompt_hash{utils.hash_string(system_instruction)}"
+            if system_instruction is not None
+            else ""
+        )
+        cache_key += f"-tokenizer{tokenizer_name}"
+        cache_key += f"-reasoning-{model_name}"
+
+        cached_instances = load_from_cache(file_name=cache_key, cache=cache_requests)
+
+        if cache_requests and cached_instances and not rewrite_requests_cache:
+            cached_instances = cached_instances[:limit]
+
+            flattened_instances = [
+                instance
+                for instance_group in cached_instances
+                for instance in instance_group
+            ]
+
+            self._reasoning_instances = flattened_instances
+            return
+
+        eval_logger.info(f"Building contexts for {self.config.task} on rank {rank}...")
+
+        instances = []
+
+        # process all documents when caching is specified for simplicity
+        if (
+            cache_requests
+            and (not cached_instances or rewrite_requests_cache)
+            and limit is not None
+        ):
+            limit = None
+
+        doc_id_docs = list(
+            self.doc_iterator(rank=rank, limit=limit, world_size=world_size)
+        )
+
+        num_docs = len(doc_id_docs)
+
+        for doc_id, doc in tqdm(
+            doc_id_docs,
+            total=num_docs,
+        ):
+            # sample fewshot context #TODO: need to offset doc_id by rank now!
+            fewshot_ctx = self.fewshot_context(
+                doc,
+                0 if self.config.num_fewshot is None else self.config.num_fewshot,
+                system_instruction,
+                apply_chat_template,
+                fewshot_as_multiturn,
+                chat_template,
+                gen_prefix=self.doc_to_prefix(doc),
+            )
+
+            arguments = (fewshot_ctx, deepcopy(self.config.reasoning_kwargs))
+            
+            inst = Instance(
+                    request_type="generate_until",
+                    doc=doc,
+                    arguments=arguments,
+                    idx=0,
+                    metadata=(self.config["task"], doc_id, self.config.repeats),
+                )
+
+            if not isinstance(inst, list):
+                inst = [inst]
+
+            instances.append(inst)
+
+        # now flatten, this is to allow slicing to work with pickles
+
+        sliced_instances = instances[:og_limit]
+
+        flattened_instances = [
+            instance
+            for instance_group in sliced_instances
+            for instance in instance_group
+        ]
+
+        self._reasoning_instances = flattened_instances
+
+        if len(self._reasoning_instances) == 0:
+            raise ValueError("task.build_all_reasoning_requests() did not find any docs!")
+
+        if cache_requests and (not cached_instances or rewrite_requests_cache):
+            save_to_cache(file_name=cache_key, obj=instances)
+
 
     def construct_requests(
         self, doc: dict, ctx: str, **kwargs
